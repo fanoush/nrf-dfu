@@ -54,8 +54,18 @@ extern const uint32_t _stext[];
 #define MBR_VECTOR_TABLE       (0x20000000)
 
 #if NRF52832_XXAA || NRF52840_XXAA
+
+#if SD_VER == 2
+#define APP_CODE_BASE          (0x0001c000) // TODO: check SD version
+#elif SD_VER < 5
+#define APP_CODE_BASE          (0x0001f000) // TODO: check SD version
+#elif SD_VER == 5
+#define APP_CODE_BASE          (0x00023000) // TODO: check SD version
+#else
 #define APP_CODE_BASE          (0x00026000) // TODO: check SD version
+#endif
 #define APP_RAM_BASE           (0x20003800)
+//#endif
 #define PAGE_SIZE              (4096)
 #define PAGE_SIZE_LOG2         (12)
 

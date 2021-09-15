@@ -85,6 +85,13 @@ static void jump_to_app() {
 uint8_t flash_buf[PAGE_SIZE];
 uint8_t *flash_buf_ptr;
 
+static nrf_clock_lf_cfg_t clock_lf_cfg = {
+ .source        = NRF_CLOCK_LF_SRC_RC,
+ .rc_ctiv       = 16,
+ .rc_temp_ctiv  = 2,
+ .xtal_accuracy = NRF_CLOCK_LF_XTAL_ACCURACY_20_PPM
+};
+
 void _start(void) {
 #if DEBUG
     uart_enable();
@@ -110,7 +117,7 @@ void _start(void) {
     //   * The reset reason is suspicious.
     uint32_t *app_isr = (uint32_t*)APP_CODE_BASE;
     uint32_t reset_handler = app_isr[1];
-    if (reset_handler != 0xffffffff && NRF_POWER->GPREGRET == 0 && (NRF_POWER->RESETREAS & DFU_RESET_REASONS) == 0) {
+    if (reset_handler != 0xffffffff && NRF_POWER->GPREGRET != 2 && (NRF_POWER->RESETREAS & DFU_RESET_REASONS) == 0) {
         // There is a valid application and the application hasn't
         // requested for DFU mode.
         LOG("jump to application");
@@ -139,7 +146,7 @@ void _start(void) {
     // DFU mode isn't meant to be enabled for long periods anyway. It
     // avoids having to configure internal/external clocks.
     LOG("enable sd");
-    uint32_t err_code = sd_softdevice_enable(NULL, softdevice_assert_handler);
+    uint32_t err_code = sd_softdevice_enable(&clock_lf_cfg /*NULL*/, softdevice_assert_handler);
     if (err_code != 0) {
         LOG_NUM("cannot enable SoftDevice:", err_code);
     }

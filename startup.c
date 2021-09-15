@@ -66,6 +66,8 @@ void Default_Handler(void) {
 void HardFault_Handler (void) __attribute__ ((weak, alias("Default_Handler")));
 #endif
 
+void errata_fix(void);
+
 void Reset_Handler(void) {
 #if 0
     // RAMON and RAMONB registers. These are the default values (after
@@ -82,6 +84,7 @@ void Reset_Handler(void) {
     ram_on_addr   = 1 << 16;
     ram_on_b_addr = 1 << 17;
 #endif
+    errata_fix();
 
     // Initialize .data segment.
     uint32_t * p_src  = &_sidata;

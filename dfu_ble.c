@@ -80,14 +80,14 @@ static struct {
     BLE_GAP_AD_TYPE_128BIT_SERVICE_UUID_COMPLETE,
     UUID_BASE,
 };
-
+#if SD_VER > 5
 static ble_gap_adv_data_t m_adv_data = {
     .adv_data = {
         .p_data = (uint8_t*)&adv_data,
         .len = sizeof(adv_data),
     },
 };
-
+#endif
 static ble_gap_conn_params_t gap_conn_params = {
     .min_conn_interval = BLE_MIN_CONN_INTERVAL,
     .max_conn_interval = BLE_MAX_CONN_INTERVAL,
@@ -103,6 +103,7 @@ static ble_gap_conn_sec_mode_t sec_mode = {
 };
 
 static ble_gap_adv_params_t m_adv_params = {
+#if SD_VER > 5
     .properties = {
         .type             = BLE_GAP_ADV_TYPE_CONNECTABLE_SCANNABLE_UNDIRECTED,
         .anonymous        = 0,
@@ -118,6 +119,13 @@ static ble_gap_adv_params_t m_adv_params = {
     .secondary_phy = BLE_GAP_PHY_AUTO,
     .set_id = 0,
     .scan_req_notification = 0,
+#else
+    .type = BLE_GAP_ADV_TYPE_ADV_IND,
+    .p_peer_addr = NULL,
+    .interval    = MSEC_TO_UNITS(100, UNIT_0_625_MS), // approx 100ms
+    .fp = BLE_GAP_ADV_FP_ANY,
+    .timeout  = 0,
+#endif
 };
 
 // Value of the 'info' characteristic.
@@ -239,14 +247,35 @@ static uint16_t ble_command_conn_handle;
 
 static uint32_t app_ram_base = APP_RAM_BASE;
 
+#if SD_VER > 5
 static uint8_t adv_handle;
+#else
+//#define SOFTDEVICE_VS_UUID_COUNT       0
+#define SOFTDEVICE_GATTS_ATTR_TAB_SIZE BLE_GATTS_ATTR_TAB_SIZE_DEFAULT
+#define SOFTDEVICE_GATTS_SRV_CHANGED   0
+//#define SOFTDEVICE_PERIPH_CONN_COUNT   1
+//#define SOFTDEVICE_CENTRAL_CONN_COUNT  4
+#define SOFTDEVICE_CENTRAL_SEC_COUNT   1
+
+static ble_enable_params_t ble_enable_params = {
+    .common_enable_params.vs_uuid_count   = 1,
+    .gatts_enable_params.attr_tab_size    = SOFTDEVICE_GATTS_ATTR_TAB_SIZE,
+    .gatts_enable_params.service_changed  = SOFTDEVICE_GATTS_SRV_CHANGED,
+    .gap_enable_params.periph_conn_count  = 1,
+    .gap_enable_params.central_conn_count = 0, //1,
+    .gap_enable_params.central_sec_count  = 0, //SOFTDEVICE_CENTRAL_SEC_COUNT,
+};
+#endif
 
 void ble_init(void) {
     LOG("enable ble");
 
     // Enable BLE stack.
-
+#if SD_VER < 5
+    uint32_t err_code = sd_ble_enable(&ble_enable_params,&app_ram_base);
+#else
     uint32_t err_code = sd_ble_enable(&app_ram_base);
+#endif
     if (err_code != 0) {
         LOG_NUM("cannot enable BLE:", err_code);
     }
@@ -263,12 +292,24 @@ void ble_init(void) {
     }
 
     // start advertising
+#if SD_VER < 5
+  err_code = sd_ble_gap_adv_data_set((uint8_t *)&adv_data, sizeof(adv_data), (const uint8_t *)&adv_data, 0);
+  if (!err_code){
+        LOG("adv starting");
+    if ( sd_ble_gap_adv_start(&m_adv_params) != 0){
+        LOG("cannot start adv");
+    } else {
+        LOG("adv started");
+    }
+  }
+#else
     if (sd_ble_gap_adv_set_configure(&adv_handle, &m_adv_data, &m_adv_params) != 0) {
         LOG("cannot configure advertisment");
     }
     if (sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT) != 0) {
         LOG("cannot start advertisment");
     }
+#endif
 
     uuid.uuid = UUID_DFU_SERVICE;
     if (sd_ble_uuid_vs_add(&uuid_base, &uuid.type) != 0) {
@@ -378,7 +419,11 @@ static void ble_evt_handler(ble_evt_t * p_ble_evt) {
 
         case BLE_GAP_EVT_DISCONNECTED: {
             LOG("ble: disconnected");
+#if SD_VER <5
+            if (sd_ble_gap_adv_start(&m_adv_params) != 0) {
+#else
             if (sd_ble_gap_adv_start(adv_handle, BLE_CONN_CFG_TAG_DEFAULT) != 0) {
+#endif
                 LOG("Could not restart advertising after disconnect.");
             }
             break;
@@ -424,7 +469,7 @@ static void ble_evt_handler(ble_evt_t * p_ble_evt) {
             LOG("ble: sys attr missing");
             break;
 
-#if NRF52
+#if NRF52 && (SD_VER > 2)
         case BLE_GATTS_EVT_EXCHANGE_MTU_REQUEST:
             LOG("ble: exchange MTU request");
             sd_ble_gatts_exchange_mtu_reply(p_ble_evt->evt.gatts_evt.conn_handle, GATT_MTU_SIZE_DEFAULT);

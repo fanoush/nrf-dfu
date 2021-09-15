@@ -99,8 +99,14 @@ DEFINE_APP_HANDLER(35, COMP_LPCOMP_IRQHandler)
 DEFINE_APP_HANDLER(36, SWI0_EGU0_IRQHandler)
 DEFINE_SD_HANDLER(37, SWI1_EGU1_IRQHandler)
 DEFINE_APP_HANDLER(38, SWI2_EGU2_IRQHandler)
+#if SD_VER > 3
+// release notes for 5.0 and 4.0 SWI3 is no longer reserved for use by the SoftDevice and is available for the application
 DEFINE_APP_HANDLER(39, SWI3_EGU3_IRQHandler)
-DEFINE_APP_HANDLER(40, SWI4_EGU4_IRQHandler)
+#else
+DEFINE_SD_HANDLER(39, SWI3_EGU3_IRQHandler)
+#endif
+// SWI 4,5 was always reserved for SD https://devzone.nordicsemi.com/f/nordic-q-a/54123/nrfx-v2-0-0-nrfx_swi_used---nrfx_egus_used
+DEFINE_SD_HANDLER(40, SWI4_EGU4_IRQHandler)
 DEFINE_SD_HANDLER(41, SWI5_EGU5_IRQHandler)
 DEFINE_APP_HANDLER(42, TIMER3_IRQHandler)
 DEFINE_APP_HANDLER(43, TIMER4_IRQHandler)

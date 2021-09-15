@@ -2,6 +2,7 @@
 # Compile options.
 # Note that you will have to run `make clean` before compiling with different options.
 SD ?= s132_nrf52_6.1.1
+SDVER ?= 6
 PAGESIZE ?= 4096
 DEBUG ?= 0
 DFU_TYPE ?= mbr
@@ -25,7 +26,7 @@ gdb:
 	arm-none-eabi-gdb build/dfu.elf -ex "target remote :2331"
 
 # Basic flags.
-CFLAGS += -flto -Os -g -mthumb -mcpu=cortex-m4 -Wall -Werror -nostartfiles
+CFLAGS += -flto -Os -g -mthumb -mcpu=cortex-m4 -Wall -Werror -Wno-unused-function -nostartfiles
 LDFLAGS += -Wl,-T -Wl,nrf52_512k_s132_$(DFU_TYPE).ld -Wl,--gc-sections
 
 # Extra include directories.
@@ -42,7 +43,7 @@ CFLAGS += -DNRF52832_XXAA=1 # required by nrfx
 CFLAGS += -DNRF52=1         # required by the DFU
 CFLAGS += -DDFU_TYPE_$(DFU_TYPE)=1
 CFLAGS += -DDEBUG=$(DEBUG)
-CFLAGS += -D$(BOARD)
+CFLAGS += -D$(BOARD) -DSD_VER=$(SDVER)
 
 build/combined.hex: lib/$(SD)/$(SD)_softdevice.hex build/dfu.hex
 	./mergehex.py --pagesize=$(PAGESIZE) $@ $^
@@ -50,7 +51,7 @@ build/combined.hex: lib/$(SD)/$(SD)_softdevice.hex build/dfu.hex
 build/dfu.hex: build/dfu.elf
 	arm-none-eabi-objcopy -O ihex build/dfu.elf build/dfu.hex
 
-build/dfu.elf: build/dfu.o build/dfu_sd.o build/dfu_uart.o build/dfu_ble.o build/startup.o
+build/dfu.elf: build/dfu.o build/dfu_sd.o build/dfu_uart.o build/dfu_ble.o build/startup.o build/errata.o
 	arm-none-eabi-gcc $(CFLAGS) $(LDFLAGS) -o $@ $^
 	arm-none-eabi-size $@
 

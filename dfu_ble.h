@@ -32,4 +32,6 @@ void ble_run(void);
 
 void ble_send_reply(uint8_t code);
 
+#ifndef GATT_MTU_SIZE_DEFAULT
 #define GATT_MTU_SIZE_DEFAULT (23)
+#endif

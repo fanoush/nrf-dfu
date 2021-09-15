@@ -58,18 +58,21 @@ void uart_write_num(uint32_t n) {
 
 #if DEBUG
 void uart_enable() {
+    NRF_UART0->ENABLE        = 0;
     // TODO: set correct GPIO configuration? Only necessary when system
     // goes to OFF state.
-    NRF_UART0->ENABLE        = UART_ENABLE_ENABLE_Enabled;
     NRF_UART0->BAUDRATE      = UART_BAUDRATE_BAUDRATE_Baud115200;
-    NRF_UART0->TASKS_STARTTX = 1;
     #if defined(WT51822_S4AT)
     NRF_UART0->PSELTXD       = 2; // P0.02
     #elif defined(PCA10040)
     NRF_UART0->PSELTXD       = 6; // P0.06
+    #elif defined(E104)
+    NRF_UART0->PSELTXD       = 18; // P0.06
     #else
     #error Setup TX pin for debugging
     #endif
+    NRF_UART0->ENABLE        = UART_ENABLE_ENABLE_Enabled;
+    NRF_UART0->TASKS_STARTTX = 1;
 }
 #endif
 
